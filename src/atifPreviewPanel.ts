@@ -457,6 +457,28 @@ function getStyles(): string {
       align-items: center;
     }
 
+    .filter-skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-row-label {
+      font-size: 11px;
+      color: var(--subtle);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 48px;
+    }
+
     .filter-tool-btn {
       font-size: 11px;
       padding: 4px 12px;
@@ -477,6 +499,28 @@ function getStyles(): string {
       background: var(--accent);
       color: #fff;
       border-color: var(--accent);
+    }
+
+    .filter-skill-btn {
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--fg);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .filter-skill-btn:hover {
+      background: var(--hover-bg);
+    }
+
+    .filter-skill-btn.active {
+      background: var(--badge-agent);
+      color: #fff;
+      border-color: var(--badge-agent);
     }
 
     .filter-text {
@@ -1124,6 +1168,7 @@ function getScript(): string {
 
         // Filter bar
         var usedTools = {};
+        var usedSkills = {};
         t.steps.forEach(function(s) {
           if (s.tool_calls) {
             s.tool_calls.forEach(function(tc) {
@@ -1131,16 +1176,30 @@ function getScript(): string {
               if (name) usedTools[name] = true;
             });
           }
+          getStepSkills(s).forEach(function(sk) { usedSkills[sk] = true; });
         });
         var usedToolNames = Object.keys(usedTools).sort();
+        var usedSkillNames = Object.keys(usedSkills).sort();
         html += '<div class="filter-bar" data-pane="' + paneId + '">';
         if (usedToolNames.length > 0) {
-          html += '<div class="filter-tools" data-pane="' + paneId + '">';
+          html += '<div class="filter-row">';
+          html += '<label class="filter-row-label">Tools:</label>';
+          html += '<div class="filter-tools" data-pane="' + paneId + '" data-filter-kind="tool">';
           html += '<button class="filter-tool-btn active" data-tool="__all__" data-pane="' + paneId + '">All</button>';
           usedToolNames.forEach(function(name) {
             html += '<button class="filter-tool-btn" data-tool="' + esc(name) + '" data-pane="' + paneId + '">' + esc(name) + '</button>';
           });
-          html += '</div>';
+          html += '</div></div>';
+        }
+        if (usedSkillNames.length > 0) {
+          html += '<div class="filter-row">';
+          html += '<label class="filter-row-label">Skills:</label>';
+          html += '<div class="filter-skills" data-pane="' + paneId + '" data-filter-kind="skill">';
+          html += '<button class="filter-skill-btn active" data-skill="__all__" data-pane="' + paneId + '">All</button>';
+          usedSkillNames.forEach(function(name) {
+            html += '<button class="filter-skill-btn" data-skill="' + esc(name) + '" data-pane="' + paneId + '">' + esc(name) + '</button>';
+          });
+          html += '</div></div>';
         }
         html += '<div class="filter-text">';
         html += '<label>Search:</label>';
@@ -1247,6 +1306,42 @@ function getScript(): string {
         return parts.join(' ').toLowerCase();
       }
 
+      // Detect skill usage from tool call arguments. A skill is identified by a
+      // path under a known VS Code Agent Skills location:
+      //   .github/skills/, .claude/skills/, .agents/skills/, .copilot/skills/
+      // (project skills live in the workspace; personal skills live under ~/).
+      // The segment immediately after "skills/" is the skill name. Any file
+      // under that directory (including subfolders) counts as skill usage.
+      function collectSkillsFromValue(val, out) {
+        if (val == null) return;
+        if (typeof val === 'string') {
+          var re = /(?:^|\\/)\\.(?:github|claude|agents|copilot)\\/skills\\/([^\\/\\s"']+)/g;
+          var m;
+          while ((m = re.exec(val)) !== null) {
+            out[m[1]] = true;
+          }
+        } else if (typeof val === 'object') {
+          for (var k in val) {
+            if (Object.prototype.hasOwnProperty.call(val, k)) {
+              collectSkillsFromValue(val[k], out);
+            }
+          }
+        }
+      }
+      function getStepSkills(step) {
+        var found = {};
+        if (step.tool_calls) {
+          step.tool_calls.forEach(function(tc) {
+            var args = tc.arguments || (tc.function && tc.function.arguments);
+            if (typeof args === 'string') {
+              try { args = JSON.parse(args); } catch (e) { /* leave as string */ }
+            }
+            collectSkillsFromValue(args, found);
+          });
+        }
+        return Object.keys(found);
+      }
+
       function applyFilters(paneId) {
         var container = document.querySelector('.steps-container[data-pane="' + paneId + '"]');
         if (!container) return;
@@ -1261,6 +1356,20 @@ function getScript(): string {
           if (!allActive) {
             toolBar.querySelectorAll('.filter-tool-btn.active').forEach(function(b) {
               selectedTools.push(b.getAttribute('data-tool'));
+            });
+          }
+        }
+
+        // Get active skill filters
+        var skillBar = document.querySelector('.filter-skills[data-pane="' + paneId + '"]');
+        var skillAllActive = true;
+        var selectedSkills = [];
+        if (skillBar) {
+          var skillAllBtn = skillBar.querySelector('[data-skill="__all__"]');
+          skillAllActive = skillAllBtn && skillAllBtn.classList.contains('active');
+          if (!skillAllActive) {
+            skillBar.querySelectorAll('.filter-skill-btn.active').forEach(function(b) {
+              selectedSkills.push(b.getAttribute('data-skill'));
             });
           }
         }
@@ -1286,6 +1395,15 @@ function getScript(): string {
               return stepTools.indexOf(t) !== -1;
             });
             if (!hasMatchingTool) match = false;
+          }
+
+          // Skill filter
+          if (match && !skillAllActive && selectedSkills.length > 0) {
+            var stepSkills = (el.getAttribute('data-skills') || '').split(',').filter(Boolean);
+            var hasMatchingSkill = selectedSkills.some(function(s) {
+              return stepSkills.indexOf(s) !== -1;
+            });
+            if (!hasMatchingSkill) match = false;
           }
 
           // Text filter
@@ -1330,6 +1448,30 @@ function getScript(): string {
             }
           }
           applyFilters(paneId);
+          return;
+        }
+
+        // Filter skill button click
+        const filterSkillBtn = target.closest('.filter-skill-btn');
+        if (filterSkillBtn) {
+          var paneId2 = filterSkillBtn.getAttribute('data-pane');
+          var skill = filterSkillBtn.getAttribute('data-skill');
+          var skillBar = filterSkillBtn.closest('.filter-skills');
+          if (skill === '__all__') {
+            skillBar.querySelectorAll('.filter-skill-btn').forEach(function(b) {
+              b.classList.remove('active');
+            });
+            filterSkillBtn.classList.add('active');
+          } else {
+            filterSkillBtn.classList.toggle('active');
+            var skillAllBtn2 = skillBar.querySelector('[data-skill="__all__"]');
+            if (skillAllBtn2) skillAllBtn2.classList.remove('active');
+            var anyActive2 = skillBar.querySelectorAll('.filter-skill-btn.active');
+            if (anyActive2.length === 0 && skillAllBtn2) {
+              skillAllBtn2.classList.add('active');
+            }
+          }
+          applyFilters(paneId2);
           return;
         }
 
@@ -1479,9 +1621,10 @@ function getScript(): string {
             if (name) stepToolNames.push(name);
           });
         }
+        var stepSkillNames = getStepSkills(step);
 
         const source = step.source || 'unknown';
-        let html = '<div class="step" data-index="' + index + '" data-tools="' + esc(stepToolNames.join(',')) + '">';
+        let html = '<div class="step" data-index="' + index + '" data-tools="' + esc(stepToolNames.join(',')) + '" data-skills="' + esc(stepSkillNames.join(',')) + '">';
 
         // Header
         html += '<div class="step-header">';
@@ -1501,6 +1644,10 @@ function getScript(): string {
         }
         if (step.tool_calls && step.tool_calls.length > 0) {
           html += '<span class="step-indicator" title="Tool calls"><span class="step-indicator-icon codicon codicon-tools"></span><span class="step-indicator-count">' + step.tool_calls.length + '</span></span>';
+        }
+        if (stepSkillNames.length > 0) {
+          var skillTitle = 'Skill' + (stepSkillNames.length > 1 ? 's' : '') + ': ' + stepSkillNames.join(', ');
+          html += '<span class="step-indicator skill-indicator" title="' + esc(skillTitle) + '"><span class="step-indicator-icon codicon codicon-mortar-board"></span><span class="step-indicator-count">' + stepSkillNames.length + '</span></span>';
         }
         html += '</span>';
         var duration = getDuration(step, index, steps);
