@@ -4,6 +4,6 @@ All notable changes to the "atif-visualizer" extension will be documented in thi
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.1.0] - 2026-04-23
 
 - Initial release
