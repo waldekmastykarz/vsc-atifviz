@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 
 export class AtifPreviewPanel {
-  private static currentPanel: AtifPreviewPanel | undefined;
+  private static panels: Map<string, AtifPreviewPanel> = new Map();
   private static readonly viewType = 'atifPreview';
 
   private readonly panel: vscode.WebviewPanel;
@@ -12,11 +11,12 @@ export class AtifPreviewPanel {
 
   public static createOrShow(extensionUri: vscode.Uri, document: vscode.TextDocument): void {
     const column = vscode.ViewColumn.Beside;
+    const key = document.uri.toString();
 
-    if (AtifPreviewPanel.currentPanel) {
-      AtifPreviewPanel.currentPanel.sourceUri = document.uri;
-      AtifPreviewPanel.currentPanel.update(document.getText());
-      AtifPreviewPanel.currentPanel.panel.reveal(column);
+    const existing = AtifPreviewPanel.panels.get(key);
+    if (existing) {
+      existing.update(document.getText());
+      existing.panel.reveal(column);
       return;
     }
 
@@ -33,15 +33,13 @@ export class AtifPreviewPanel {
       }
     );
 
-    AtifPreviewPanel.currentPanel = new AtifPreviewPanel(panel, extensionUri, document);
+    AtifPreviewPanel.panels.set(key, new AtifPreviewPanel(panel, extensionUri, document));
   }
 
   public static updateIfActive(document: vscode.TextDocument): void {
-    if (
-      AtifPreviewPanel.currentPanel &&
-      AtifPreviewPanel.currentPanel.sourceUri.toString() === document.uri.toString()
-    ) {
-      AtifPreviewPanel.currentPanel.update(document.getText());
+    const existing = AtifPreviewPanel.panels.get(document.uri.toString());
+    if (existing) {
+      existing.update(document.getText());
     }
   }
 
@@ -66,14 +64,12 @@ export class AtifPreviewPanel {
   }
 
   private async openReferencedFile(refPath: string): Promise<void> {
-    // Resolve relative paths against the source file's directory
-    const sourceDir = path.dirname(this.sourceUri.fsPath);
-    const resolved = path.isAbsolute(refPath)
-      ? refPath
-      : path.resolve(sourceDir, refPath);
+    const sourceDir = vscode.Uri.joinPath(this.sourceUri, '..');
+    const uri = refPath.startsWith('/')
+      ? vscode.Uri.file(refPath)
+      : vscode.Uri.joinPath(sourceDir, refPath);
 
     try {
-      const uri = vscode.Uri.file(resolved);
       const doc = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
       // Trigger preview on the opened file
@@ -84,7 +80,7 @@ export class AtifPreviewPanel {
   }
 
   private dispose(): void {
-    AtifPreviewPanel.currentPanel = undefined;
+    AtifPreviewPanel.panels.delete(this.sourceUri.toString());
     this.panel.dispose();
     while (this.disposables.length) {
       const d = this.disposables.pop();
