@@ -22,6 +22,7 @@ Raw trajectory JSON is painful to read. Scrolling through hundreds of lines to f
 - **Multi-trajectory support** — files with multiple trajectories render as tabs (parent + subagent)
 - **Subagent navigation** — click through to linked subagent trajectories, including external file references
 - **Filter & search** — filter steps by tool name or search across all message content
+- **Skill usage detection** — spot when an agent reads files from a known Agent Skills location (`.github/skills/`, `.claude/skills/`, `.agents/skills/`, `.copilot/skills/`), with per-skill filter pills and step indicators
 - **Live reload** — preview updates automatically as you edit the source file
 - **Native VS Code look** — uses your theme colors, codicons, and standard UI patterns
 

@@ -21,6 +21,36 @@
               "required": ["ticker", "metric"]
             }
           }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "description": "Read a file from disk",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "filePath": { "type": "string" },
+                "startLine": { "type": "integer" },
+                "endLine": { "type": "integer" }
+              },
+              "required": ["filePath"]
+            }
+          }
+        },
+        {
+          "type": "function",
+          "function": {
+            "name": "list_dir",
+            "description": "List directory contents",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "path": { "type": "string" }
+              },
+              "required": ["path"]
+            }
+          }
         }
       ],
       "extra": {}
@@ -32,7 +62,7 @@
       "total_completion_tokens": 204,
       "total_cached_tokens": 200,
       "total_cost_usd": 0.00128,
-      "total_steps": 4,
+      "total_steps": 5,
       "extra": {}
     },
     "steps": [
@@ -45,13 +75,63 @@
       },
       {
         "step_id": 2,
+        "timestamp": "2025-10-11T10:30:01Z",
+        "source": "agent",
+        "model_name": "gemini-2.5-flash",
+        "message": "Loading my financial-analysis skill before answering.",
+        "reasoning_content": "I have a relevant skill available. Reading the SKILL.md to follow its methodology.",
+        "tool_calls": [
+          {
+            "tool_call_id": "call_skill_read_main",
+            "function_name": "read_file",
+            "arguments": {
+              "filePath": "/tmp/workspaces/project-dc5e5495/.agents/skills/financial-analysis/SKILL.md",
+              "startLine": 1,
+              "endLine": 200
+            }
+          },
+          {
+            "tool_call_id": "call_skill_list_assets",
+            "function_name": "list_dir",
+            "arguments": {
+              "path": "/tmp/workspaces/project-dc5e5495/.agents/skills/financial-analysis/templates"
+            }
+          }
+        ],
+        "observation": {
+          "results": [
+            {
+              "source_call_id": "call_skill_read_main",
+              "content": "# Financial Analysis Skill\n\nUse this skill when comparing equities. Always fetch price first, then derive ratios."
+            },
+            {
+              "source_call_id": "call_skill_list_assets",
+              "content": "compare-equities.md\nratios-cheatsheet.md"
+            }
+          ]
+        },
+        "metrics": {
+          "prompt_tokens": 240,
+          "completion_tokens": 30,
+          "cost_usd": 0.00012
+        }
+      },
+      {
+        "step_id": 3,
         "timestamp": "2025-10-11T10:30:02Z",
         "source": "agent",
         "model_name": "gemini-2.5-flash",
         "reasoning_effort": "medium",
         "message": "I will search for the current trading prices of both GOOGL and MSFT.",
-        "reasoning_content": "The user wants a comparison. I'll fetch both prices in parallel using tool calls.",
+        "reasoning_content": "Following the skill's guidance: fetch prices first, in parallel.",
         "tool_calls": [
+          {
+            "tool_call_id": "call_skill_read_template",
+            "function_name": "read_file",
+            "arguments": {
+              "filePath": "/tmp/workspaces/project-dc5e5495/.agents/skills/financial-analysis/templates/compare-equities.md"
+            }
+          },
           {
             "tool_call_id": "call_price_googl",
             "function_name": "financial_search",
@@ -65,6 +145,10 @@
         ],
         "observation": {
           "results": [
+            {
+              "source_call_id": "call_skill_read_template",
+              "content": "## Compare Equities Template\n1. State both prices.\n2. Compute ratio.\n3. Note key qualitative differences."
+            },
             {
               "source_call_id": "call_price_googl",
               "content": "GOOGL is currently trading at $185.35 (Close: 10/11/2025)"
@@ -83,13 +167,22 @@
         }
       },
       {
-        "step_id": 3,
+        "step_id": 4,
         "timestamp": "2025-10-11T10:30:04Z",
         "source": "agent",
         "model_name": "gemini-2.5-flash",
         "message": "Delegating the detailed analysis to a specialist subagent.",
-        "reasoning_content": "I have both prices. I'll delegate the comparative analysis to a research subagent for deeper insight.",
+        "reasoning_content": "I have both prices. Loading the delegation skill, then handing off to a research subagent.",
         "tool_calls": [
+          {
+            "tool_call_id": "call_skill_delegation",
+            "function_name": "read_file",
+            "arguments": {
+              "filePath": "/tmp/workspaces/project-dc5e5495/.copilot/skills/subagent-delegation/SKILL.md",
+              "startLine": 1,
+              "endLine": 80
+            }
+          },
           {
             "tool_call_id": "call_delegate_analysis",
             "function_name": "delegate_to_subagent",
@@ -101,6 +194,10 @@
         ],
         "observation": {
           "results": [
+            {
+              "source_call_id": "call_skill_delegation",
+              "content": "# Subagent Delegation\n\nDelegate when the task requires specialised expertise or parallel work."
+            },
             {
               "source_call_id": "call_delegate_analysis",
               "content": "Analysis complete. See subagent trajectory for details.",
@@ -120,7 +217,7 @@
         }
       },
       {
-        "step_id": 4,
+        "step_id": 5,
         "timestamp": "2025-10-11T10:30:10Z",
         "source": "agent",
         "model_name": "gemini-2.5-flash",
