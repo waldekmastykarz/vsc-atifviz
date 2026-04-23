@@ -1,0 +1,187 @@
+[
+  {
+    "schema_version": "ATIF-v1.5",
+    "session_id": "025B810F-B3A2-4C67-93C0-FE7A142A947A",
+    "agent": {
+      "name": "harbor-agent",
+      "version": "1.0.0",
+      "model_name": "gemini-2.5-flash",
+      "tool_definitions": [
+        {
+          "type": "function",
+          "function": {
+            "name": "financial_search",
+            "description": "Search for financial data for a given stock ticker",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "ticker": { "type": "string" },
+                "metric": { "type": "string" }
+              },
+              "required": ["ticker", "metric"]
+            }
+          }
+        }
+      ],
+      "extra": {}
+    },
+    "notes": "Parent trajectory demonstrating subagent delegation.",
+    "extra": {},
+    "final_metrics": {
+      "total_prompt_tokens": 1620,
+      "total_completion_tokens": 204,
+      "total_cached_tokens": 200,
+      "total_cost_usd": 0.00128,
+      "total_steps": 4,
+      "extra": {}
+    },
+    "steps": [
+      {
+        "step_id": 1,
+        "timestamp": "2025-10-11T10:30:00Z",
+        "source": "user",
+        "message": "Compare the current trading price of Alphabet (GOOGL) and Microsoft (MSFT) and give me a brief analysis.",
+        "extra": {}
+      },
+      {
+        "step_id": 2,
+        "timestamp": "2025-10-11T10:30:02Z",
+        "source": "agent",
+        "model_name": "gemini-2.5-flash",
+        "reasoning_effort": "medium",
+        "message": "I will search for the current trading prices of both GOOGL and MSFT.",
+        "reasoning_content": "The user wants a comparison. I'll fetch both prices in parallel using tool calls.",
+        "tool_calls": [
+          {
+            "tool_call_id": "call_price_googl",
+            "function_name": "financial_search",
+            "arguments": { "ticker": "GOOGL", "metric": "price" }
+          },
+          {
+            "tool_call_id": "call_price_msft",
+            "function_name": "financial_search",
+            "arguments": { "ticker": "MSFT", "metric": "price" }
+          }
+        ],
+        "observation": {
+          "results": [
+            {
+              "source_call_id": "call_price_googl",
+              "content": "GOOGL is currently trading at $185.35 (Close: 10/11/2025)"
+            },
+            {
+              "source_call_id": "call_price_msft",
+              "content": "MSFT is currently trading at $412.80 (Close: 10/11/2025)"
+            }
+          ]
+        },
+        "metrics": {
+          "prompt_tokens": 520,
+          "completion_tokens": 80,
+          "cached_tokens": 200,
+          "cost_usd": 0.00045
+        }
+      },
+      {
+        "step_id": 3,
+        "timestamp": "2025-10-11T10:30:04Z",
+        "source": "agent",
+        "model_name": "gemini-2.5-flash",
+        "message": "Delegating the detailed analysis to a specialist subagent.",
+        "reasoning_content": "I have both prices. I'll delegate the comparative analysis to a research subagent for deeper insight.",
+        "tool_calls": [
+          {
+            "tool_call_id": "call_delegate_analysis",
+            "function_name": "delegate_to_subagent",
+            "arguments": {
+              "task": "Compare GOOGL at $185.35 with MSFT at $412.80. Provide brief analysis.",
+              "agent_type": "research-analyst"
+            }
+          }
+        ],
+        "observation": {
+          "results": [
+            {
+              "source_call_id": "call_delegate_analysis",
+              "content": "Analysis complete. See subagent trajectory for details.",
+              "subagent_trajectory_ref": [
+                {
+                  "session_id": "SUB-AGENT-7F3E-ANALYSIS",
+                  "extra": { "summary": "Completed comparative analysis of GOOGL vs MSFT" }
+                }
+              ]
+            }
+          ]
+        },
+        "metrics": {
+          "prompt_tokens": 600,
+          "completion_tokens": 80,
+          "cost_usd": 0.00050
+        }
+      },
+      {
+        "step_id": 4,
+        "timestamp": "2025-10-11T10:30:10Z",
+        "source": "agent",
+        "model_name": "gemini-2.5-flash",
+        "reasoning_effort": "low",
+        "message": "As of October 11, 2025:\n\n• Alphabet (GOOGL): $185.35\n• Microsoft (MSFT): $412.80\n\nMSFT trades at roughly 2.2× the price of GOOGL. Both are mega-cap tech leaders, but MSFT's higher price reflects its dominant position in enterprise software and cloud (Azure). GOOGL offers stronger value on a P/E basis given its advertising revenue and AI investments.",
+        "reasoning_content": "Incorporating the subagent's analysis into the final response.",
+        "metrics": {
+          "prompt_tokens": 500,
+          "completion_tokens": 44,
+          "cost_usd": 0.00033
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": "ATIF-v1.5",
+    "session_id": "SUB-AGENT-7F3E-ANALYSIS",
+    "agent": {
+      "name": "research-analyst",
+      "version": "1.0.0",
+      "model_name": "claude-3-5-sonnet",
+      "extra": {}
+    },
+    "notes": "Subagent trajectory for comparative stock analysis.",
+    "extra": {},
+    "final_metrics": {
+      "total_prompt_tokens": 800,
+      "total_completion_tokens": 120,
+      "total_cost_usd": 0.00065,
+      "total_steps": 3,
+      "extra": {}
+    },
+    "steps": [
+      {
+        "step_id": 1,
+        "timestamp": "2025-10-11T10:30:05Z",
+        "source": "system",
+        "message": "You are a research analyst. Provide concise, data-driven stock comparisons.",
+        "extra": {}
+      },
+      {
+        "step_id": 2,
+        "timestamp": "2025-10-11T10:30:05Z",
+        "source": "user",
+        "message": "Compare GOOGL at $185.35 with MSFT at $412.80. Provide brief analysis.",
+        "extra": {}
+      },
+      {
+        "step_id": 3,
+        "timestamp": "2025-10-11T10:30:08Z",
+        "source": "agent",
+        "model_name": "claude-3-5-sonnet",
+        "reasoning_effort": "high",
+        "message": "GOOGL ($185.35) vs MSFT ($412.80):\n\n1. Price-to-Earnings: GOOGL trades at ~22x forward P/E vs MSFT at ~34x, suggesting GOOGL is relatively cheaper.\n2. Revenue Growth: Both show strong growth but GOOGL's AI-driven ad revenue acceleration gives it higher near-term upside.\n3. Cloud: Azure (MSFT) leads in enterprise adoption, but Google Cloud is growing faster from a smaller base.\n4. Risk: GOOGL faces more antitrust pressure. MSFT's diversification (Office, LinkedIn, Gaming) provides a wider moat.\n\nConclusion: GOOGL offers better value; MSFT offers more stability.",
+        "reasoning_content": "Comparing the two stocks on key financial metrics: P/E ratio, revenue growth trajectory, cloud market position, and risk factors. GOOGL appears undervalued relative to MSFT on a P/E basis.",
+        "metrics": {
+          "prompt_tokens": 800,
+          "completion_tokens": 120,
+          "cost_usd": 0.00065
+        }
+      }
+    ]
+  }
+]
