@@ -1,6 +1,6 @@
 # ATIF Trajectory Visualizer
 
-**See what your AI agent actually did.** Open any [ATIF](https://aka.ms/atif) trajectory file and get an interactive, step-by-step view of every message, tool call, reasoning trace, and token cost — right inside VS Code.
+**See what your AI agent actually did.** Open any [ATIF](https://www.harborframework.com/docs/agents/trajectory-format) trajectory file and get an interactive, step-by-step view of every message, tool call, reasoning trace, and token cost — right inside VS Code.
 
 ![ATIF Trajectory Visualizer showing a copilot-chat trajectory with step timeline, tool call details, and token metrics](screenshot.png)
 
@@ -31,4 +31,4 @@ The preview opens in a side panel so you can read the trajectory alongside the r
 
 ## What is ATIF?
 
-[Agent Trajectory Interchange Format (ATIF)](https://aka.ms/atif) is an open schema for recording what AI agents do — the messages, tool calls, observations, metrics, and reasoning that make up a session. It gives you a standard way to capture, share, and analyze agent runs across different frameworks and models.
+[Agent Trajectory Interchange Format (ATIF)](https://www.harborframework.com/docs/agents/trajectory-format) is an open schema for recording what AI agents do — the messages, tool calls, observations, metrics, and reasoning that make up a session. It gives you a standard way to capture, share, and analyze agent runs across different frameworks and models.
