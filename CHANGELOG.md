@@ -4,6 +4,10 @@ All notable changes to the "atif-visualizer" extension will be documented in thi
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.2.0] - 2026-04-23
+
+- Support multiple preview panels for comparing trajectories side by side
+
 ## [0.1.1] - 2026-04-23
 
 - Fix ATIF links in README
