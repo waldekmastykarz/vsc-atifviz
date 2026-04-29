@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-29
+
+### Added
+
+- Copy-to-clipboard buttons for tool call arguments and results
+
 ## [0.3.0] - 2026-04-23
 
 - Detect and visualize skill usage from tool calls reading files under known Agent Skills locations (`.github/skills/`, `.claude/skills/`, `.agents/skills/`, `.copilot/skills/`)
