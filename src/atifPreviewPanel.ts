@@ -820,6 +820,9 @@ function getStyles(): string {
       color: var(--subtle);
       margin-bottom: 4px;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     /* Trajectory tabs */
@@ -945,6 +948,30 @@ function getStyles(): string {
 
     .subagent-file-link:hover {
       opacity: 0.8;
+    }
+
+    /* Copy button */
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--subtle);
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 3px;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+
+    .copy-btn:hover {
+      color: var(--fg);
+      background: var(--hover-bg);
+    }
+
+    .copy-btn.copied {
+      color: var(--success-bg);
     }
   `;
 }
@@ -1547,6 +1574,28 @@ function getScript(): string {
           return;
         }
 
+        // Copy button
+        const copyBtn = target.closest('.copy-btn');
+        if (copyBtn) {
+          const text = copyBtn.getAttribute('data-copy') || '';
+          navigator.clipboard.writeText(text).then(function() {
+            copyBtn.classList.add('copied');
+            var icon = copyBtn.querySelector('.codicon');
+            if (icon) {
+              icon.classList.remove('codicon-copy');
+              icon.classList.add('codicon-check');
+            }
+            setTimeout(function() {
+              copyBtn.classList.remove('copied');
+              if (icon) {
+                icon.classList.remove('codicon-check');
+                icon.classList.add('codicon-copy');
+              }
+            }, 1500);
+          });
+          return;
+        }
+
         // Subagent file link (open in editor)
         const fileLink = target.closest('.subagent-file-link');
         if (fileLink) {
@@ -1718,12 +1767,13 @@ function getScript(): string {
         html += '<span class="step-chevron">▶</span>';
         html += '</div>';
         html += '<div class="tool-call-body">';
-        html += '<div class="sub-label">Arguments</div>';
-        html += '<div class="code-block">' + esc(formatJson(tc.arguments)) + '</div>';
+        var argsStr = formatJson(tc.arguments);
+        html += '<div class="sub-label">Arguments <button class="copy-btn" data-copy="' + escAttr(argsStr) + '" title="Copy arguments"><span class="codicon codicon-copy"></span></button></div>';
+        html += '<div class="code-block">' + esc(argsStr) + '</div>';
         if (obsResult) {
-          html += '<div class="sub-label" style="margin-top:8px">Result</div>';
           if (obsResult.content != null) {
             var contentStr = renderMessage(obsResult.content);
+            html += '<div class="sub-label" style="margin-top:8px">Result <button class="copy-btn" data-copy="' + escAttr(contentStr) + '" title="Copy result"><span class="codicon codicon-copy"></span></button></div>';
             html += '<div class="code-block">' + esc(contentStr) + '</div>';
           }
           if (obsResult.subagent_trajectory_ref && obsResult.subagent_trajectory_ref.length > 0) {
@@ -1915,6 +1965,11 @@ function getScript(): string {
         const div = document.createElement('div');
         div.textContent = s;
         return div.innerHTML;
+      }
+
+      function escAttr(s) {
+        if (!s) return '';
+        return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       }
     })();
   `;
