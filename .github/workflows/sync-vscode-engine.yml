@@ -1,0 +1,44 @@
+name: Sync engines.vscode with @types/vscode
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-engine:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync engines.vscode to @types/vscode version
+        run: |
+          TYPES_VERSION=$(node -p "require('./package.json').devDependencies['@types/vscode']")
+          CURRENT_ENGINE=$(node -p "require('./package.json').engines.vscode")
+
+          echo "  @types/vscode: $TYPES_VERSION"
+          echo "  engines.vscode: $CURRENT_ENGINE"
+
+          if [ "$TYPES_VERSION" != "$CURRENT_ENGINE" ]; then
+            echo "Updating engines.vscode to $TYPES_VERSION"
+            node -e "
+              const fs = require('fs');
+              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              pkg.engines.vscode = pkg.devDependencies['@types/vscode'];
+              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            "
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add package.json
+            git commit -m "chore: sync engines.vscode with @types/vscode"
+            git push
+          else
+            echo "Already in sync"
+          fi
