@@ -25,7 +25,7 @@
       {
         "command": "atif-visualizer.preview",
         "title": "ATIF: Preview Trajectory",
-        "icon": "$(open-preview)"
+        "icon": "$(type-hierarchy-sub)"
       }
     ],
     "menus": {
