@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-01
+
+### Changed
+
+- Use distinct icon for trajectory preview
+
 ## [0.4.0] - 2026-04-29
 
 ### Added
