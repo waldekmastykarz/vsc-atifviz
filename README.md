@@ -1,4 +1,4 @@
-# ATIF Trajectory Visualizer
+# ATIF Preview
 
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version/waldek.atif-visualizer.svg)](https://marketplace.visualstudio.com/items?itemName=waldek.atif-visualizer)
 [![Installs](https://vsmarketplacebadges.dev/installs-short/waldek.atif-visualizer.svg)](https://marketplace.visualstudio.com/items?itemName=waldek.atif-visualizer)
@@ -6,7 +6,7 @@
 
 **See what your AI agent actually did.** Open any [ATIF](https://www.harborframework.com/docs/agents/trajectory-format) trajectory file and get an interactive, step-by-step view of every message, tool call, reasoning trace, and token cost — right inside VS Code.
 
-![ATIF Trajectory Visualizer showing a copilot-chat trajectory with step timeline, tool call details, and token metrics](screenshot.png)
+![ATIF Preview showing a copilot-chat trajectory with step timeline, tool call details, and token metrics](screenshot.png)
 
 ## Why
 

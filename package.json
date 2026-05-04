@@ -1,6 +1,6 @@
 {
   "name": "atif-visualizer",
-  "displayName": "ATIF Trajectory Visualizer",
+  "displayName": "ATIF Preview",
   "description": "Visualize Agent Trajectory Interchange Format (ATIF) files",
   "version": "0.4.1",
   "publisher": "waldek",
