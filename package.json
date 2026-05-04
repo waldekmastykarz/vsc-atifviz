@@ -2,7 +2,7 @@
   "name": "atif-visualizer",
   "displayName": "ATIF Preview",
   "description": "Visualize Agent Trajectory Interchange Format (ATIF) files",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "waldek",
   "license": "MIT",
   "icon": "icon.png",
