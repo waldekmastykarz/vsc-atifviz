@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-05-04
+
+### Changed
+
+- Renamed extension to ATIF Preview
+
 ## [0.4.1] - 2026-05-01
 
 ### Changed
