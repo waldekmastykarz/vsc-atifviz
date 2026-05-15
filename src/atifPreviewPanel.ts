@@ -973,6 +973,59 @@ function getStyles(): string {
     .copy-btn.copied {
       color: var(--success-bg);
     }
+
+    /* v1.7: copied context indicator */
+    .step.copied-context {
+      opacity: 0.5;
+      border-style: dashed;
+    }
+
+    .step.copied-context:hover {
+      opacity: 0.7;
+    }
+
+    .copied-context-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: var(--badge-system);
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* v1.7: llm call count badge */
+    .llm-count-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      color: var(--subtle);
+      white-space: nowrap;
+    }
+
+    .llm-count-badge.deterministic {
+      background: var(--badge-system);
+      color: #fff;
+      border-color: var(--badge-system);
+    }
+
+    /* v1.7: extra metadata */
+    .extra-section {
+      margin-top: 8px;
+    }
+
+    .extra-label {
+      font-size: 11px;
+      color: var(--subtle);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    /* v1.7: embedded subagent tab badge */
+    .trajectory-tab .tab-badge.embedded {
+      background: var(--badge-system);
+      color: #fff;
+    }
   `;
 }
 
@@ -999,7 +1052,7 @@ function getScript(): string {
         if (trajectories.length === 0) {
           app.innerHTML = renderError(
             'Not an ATIF Trajectory',
-            'This JSON array does not contain any valid ATIF trajectories. Each trajectory requires: schema_version, session_id, agent, and steps fields.'
+            'This JSON array does not contain any valid ATIF trajectories. Each trajectory requires: schema_version, session_id or trajectory_id, agent, and steps fields.'
           );
           return;
         }
@@ -1008,15 +1061,32 @@ function getScript(): string {
       } else {
         app.innerHTML = renderError(
           'Not an ATIF Trajectory',
-          'This JSON file does not appear to be a valid ATIF trajectory. An ATIF file requires at minimum: schema_version, session_id, agent, and steps fields.'
+          'This JSON file does not appear to be a valid ATIF trajectory. An ATIF file requires at minimum: schema_version, session_id or trajectory_id, agent, and steps fields.'
         );
         return;
       }
 
-      // Build session_id → index map for cross-referencing
+      // Flatten embedded subagent_trajectories (v1.7) into the list
+      var expandedTrajectories = [];
+      trajectories.forEach(function(t) {
+        expandedTrajectories.push(t);
+        if (Array.isArray(t.subagent_trajectories)) {
+          t.subagent_trajectories.forEach(function(sub) {
+            if (isAtif(sub)) {
+              sub._embedded = true;
+              expandedTrajectories.push(sub);
+            }
+          });
+        }
+      });
+      trajectories = expandedTrajectories;
+
+      // Build session_id → index and trajectory_id → index maps for cross-referencing
       const sessionMap = {};
+      const trajectoryIdMap = {};
       trajectories.forEach(function(t, i) {
-        sessionMap[t.session_id] = i;
+        if (t.session_id) sessionMap[t.session_id] = i;
+        if (t.trajectory_id) trajectoryIdMap[t.trajectory_id] = i;
       });
 
       if (trajectories.length === 1) {
@@ -1030,7 +1100,7 @@ function getScript(): string {
           obj &&
           typeof obj === 'object' &&
           typeof obj.schema_version === 'string' &&
-          typeof obj.session_id === 'string' &&
+          (typeof obj.session_id === 'string' || typeof obj.trajectory_id === 'string') &&
           obj.agent &&
           typeof obj.agent === 'object' &&
           Array.isArray(obj.steps)
@@ -1060,11 +1130,14 @@ function getScript(): string {
         list.forEach(function(t, i) {
           const paneId = 'traj-' + i;
           const isParent = isParentTrajectory(t, list);
+          const tabId = t.trajectory_id || t.session_id || ('Agent ' + (i + 1));
           html += '<button class="trajectory-tab' + (i === 0 ? ' active' : '') + '" data-pane="' + paneId + '">';
           html += '<span class="tab-agent">' + esc(t.agent.name || 'Agent ' + (i + 1)) + '</span>';
-          html += '<span class="tab-session">' + esc(truncate(t.session_id, 12)) + '</span>';
+          html += '<span class="tab-session">' + esc(truncate(tabId, 12)) + '</span>';
           if (isParent) {
             html += '<span class="tab-badge parent">parent</span>';
+          } else if (t._embedded) {
+            html += '<span class="tab-badge embedded">embedded</span>';
           } else {
             html += '<span class="tab-badge sub">sub</span>';
           }
@@ -1100,8 +1173,7 @@ function getScript(): string {
       }
 
       function isParentTrajectory(t, list) {
-        // A trajectory is a parent if other trajectories are referenced from it
-        // or if no other trajectory references it
+        // A trajectory is a parent if no other trajectory references it
         let isReferenced = false;
         list.forEach(function(other) {
           if (other === t) return;
@@ -1110,7 +1182,8 @@ function getScript(): string {
               step.observation.results.forEach(function(r) {
                 if (r.subagent_trajectory_ref) {
                   r.subagent_trajectory_ref.forEach(function(ref) {
-                    if (ref.session_id === t.session_id) {
+                    if ((ref.trajectory_id && ref.trajectory_id === t.trajectory_id) ||
+                        (ref.session_id && ref.session_id === t.session_id)) {
                       isReferenced = true;
                     }
                   });
@@ -1118,6 +1191,10 @@ function getScript(): string {
               });
             }
           });
+          // Also check if t is embedded in other's subagent_trajectories
+          if (t._embedded) {
+            isReferenced = true;
+          }
         });
         return !isReferenced;
       }
@@ -1145,8 +1222,15 @@ function getScript(): string {
         html += '<h1>' + esc(t.agent.name || 'Unknown Agent') + ' Trajectory</h1>';
         html += '<div class="header-meta">';
         html += '<span>Version: ' + esc(t.agent.version || '?') + '</span>';
+        html += '<span>ATIF: ' + esc(t.schema_version || '?') + '</span>';
         if (t.agent.model_name) {
           html += '<span>Model: ' + esc(t.agent.model_name) + '</span>';
+        }
+        if (t.trajectory_id) {
+          html += '<span>Trajectory: <code>' + esc(truncate(t.trajectory_id, 20)) + '</code></span>';
+        }
+        if (t.session_id) {
+          html += '<span>Session: <code>' + esc(truncate(t.session_id, 20)) + '</code></span>';
         }
         var startTs = getFirstTimestamp(t.steps);
         if (startTs) {
@@ -1673,12 +1757,22 @@ function getScript(): string {
         var stepSkillNames = getStepSkills(step);
 
         const source = step.source || 'unknown';
-        let html = '<div class="step" data-index="' + index + '" data-tools="' + esc(stepToolNames.join(',')) + '" data-skills="' + esc(stepSkillNames.join(',')) + '">';
+        var stepClasses = 'step';
+        if (step.is_copied_context) stepClasses += ' copied-context';
+        let html = '<div class="' + stepClasses + '" data-index="' + index + '" data-tools="' + esc(stepToolNames.join(',')) + '" data-skills="' + esc(stepSkillNames.join(',')) + '">';
 
         // Header
         html += '<div class="step-header">';
         html += '<span class="step-number">#' + (step.step_id || index + 1) + '</span>';
         html += '<span class="source-badge ' + source + '">' + esc(source) + '</span>';
+        if (step.is_copied_context) {
+          html += '<span class="copied-context-badge">copied context</span>';
+        }
+        if (step.llm_call_count === 0) {
+          html += '<span class="llm-count-badge deterministic" title="Deterministic dispatch (no LLM call)">deterministic</span>';
+        } else if (step.llm_call_count != null && step.llm_call_count > 1) {
+          html += '<span class="llm-count-badge" title="' + step.llm_call_count + ' LLM calls aggregated">' + step.llm_call_count + ' LLM calls</span>';
+        }
         if (step.model_name && !allSameModel) {
           html += '<span class="model-badge">' + esc(step.model_name) + '</span>';
         }
@@ -1770,11 +1864,19 @@ function getScript(): string {
         var argsStr = formatJson(tc.arguments);
         html += '<div class="sub-label">Arguments <button class="copy-btn" data-copy="' + escAttr(argsStr) + '" title="Copy arguments"><span class="codicon codicon-copy"></span></button></div>';
         html += '<div class="code-block">' + esc(argsStr) + '</div>';
+        if (tc.extra && Object.keys(tc.extra).length > 0) {
+          html += '<div class="extra-section"><div class="extra-label">Extra</div>';
+          html += '<div class="code-block">' + esc(formatJson(tc.extra)) + '</div></div>';
+        }
         if (obsResult) {
           if (obsResult.content != null) {
             var contentStr = renderMessage(obsResult.content);
             html += '<div class="sub-label" style="margin-top:8px">Result <button class="copy-btn" data-copy="' + escAttr(contentStr) + '" title="Copy result"><span class="codicon codicon-copy"></span></button></div>';
             html += '<div class="code-block">' + esc(contentStr) + '</div>';
+          }
+          if (obsResult.extra && Object.keys(obsResult.extra).length > 0) {
+            html += '<div class="extra-section"><div class="extra-label">Result Extra</div>';
+            html += '<div class="code-block">' + esc(formatJson(obsResult.extra)) + '</div></div>';
           }
           if (obsResult.subagent_trajectory_ref && obsResult.subagent_trajectory_ref.length > 0) {
             html += '<div class="sub-label" style="margin-top:8px">Subagent Trajectories</div>';
@@ -1805,6 +1907,11 @@ function getScript(): string {
           html += '<div class="code-block">' + esc(contentStr) + '</div>';
         }
 
+        if (result.extra && Object.keys(result.extra).length > 0) {
+          html += '<div class="extra-section"><div class="extra-label">Extra</div>';
+          html += '<div class="code-block">' + esc(formatJson(result.extra)) + '</div></div>';
+        }
+
         // Subagent trajectory references
         if (result.subagent_trajectory_ref && result.subagent_trajectory_ref.length > 0) {
           html += '<div class="sub-label" style="margin-top:8px">Subagent Trajectories</div>';
@@ -1820,11 +1927,17 @@ function getScript(): string {
 
       function renderSubagentRef(ref) {
         let html = '';
+        const trajectoryId = ref.trajectory_id || '';
         const sessionId = ref.session_id || '';
         const trajPath = ref.trajectory_path || '';
 
-        // Check if this session_id exists in our loaded trajectories
-        const inlineIndex = sessionMap[sessionId];
+        // Resolve: trajectory_id (embedded) takes priority, then session_id (legacy)
+        var inlineIndex = trajectoryId ? trajectoryIdMap[trajectoryId] : undefined;
+        if (inlineIndex == null && sessionId) {
+          inlineIndex = sessionMap[sessionId];
+        }
+
+        const displayId = trajectoryId || sessionId || '';
 
         if (inlineIndex != null) {
           // Inline reference → clickable tab jump
@@ -1833,12 +1946,14 @@ function getScript(): string {
           html += '<button class="subagent-link" data-target-pane="' + targetPane + '">';
           html += '<span class="link-icon">🔗</span>';
           html += '<span class="link-label">' + esc(targetTraj.agent.name || 'Subagent') + '</span>';
-          html += '<span class="link-detail">' + esc(truncate(sessionId, 20)) + '</span>';
+          html += '<span class="link-detail">' + esc(truncate(displayId, 20)) + '</span>';
           html += '</button>';
         } else {
           // External reference → show info + file link if available
           html += '<div style="margin: 4px 0;">';
-          html += '<span style="font-size: 12px;">Session: <code>' + esc(truncate(sessionId, 30)) + '</code></span>';
+          if (displayId) {
+            html += '<span style="font-size: 12px;">' + (trajectoryId ? 'Trajectory' : 'Session') + ': <code>' + esc(truncate(displayId, 30)) + '</code></span>';
+          }
           if (trajPath) {
             html += '<br><button class="subagent-file-link" data-path="' + esc(trajPath) + '">';
             html += '📂 Open ' + esc(trajPath);

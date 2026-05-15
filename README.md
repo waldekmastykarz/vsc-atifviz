@@ -20,7 +20,10 @@ Raw trajectory JSON is painful to read. Scrolling through hundreds of lines to f
 - **Reasoning traces** — agent thinking/chain-of-thought displayed inline with visual distinction
 - **Token & cost metrics** — per-step and aggregate prompt tokens, completion tokens, cached tokens, and USD cost
 - **Multi-trajectory support** — files with multiple trajectories render as tabs (parent + subagent)
-- **Subagent navigation** — click through to linked subagent trajectories, including external file references
+- **Embedded subagent trajectories** — v1.7 `subagent_trajectories` arrays are flattened into the tab view
+- **Subagent navigation** — click through to linked subagent trajectories via `trajectory_id` (embedded) or external file references
+- **LLM call count** — badges for deterministic (no-LLM) steps and multi-LLM aggregated steps
+- **Copied context** — steps marked `is_copied_context` are visually dimmed with a badge
 - **Filter & search** — filter steps by tool name or search across all message content
 - **Skill usage detection** — spot when an agent reads files from a known Agent Skills location (`.github/skills/`, `.claude/skills/`, `.agents/skills/`, `.copilot/skills/`), with per-skill filter pills and step indicators
 - **Live reload** — preview updates automatically as you edit the source file
