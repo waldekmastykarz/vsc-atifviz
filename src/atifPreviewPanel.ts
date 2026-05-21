@@ -1426,7 +1426,7 @@ function getScript(): string {
       function collectSkillsFromValue(val, out) {
         if (val == null) return;
         if (typeof val === 'string') {
-          var re = /(?:^|\\/)\\.(?:github|claude|agents|copilot)\\/skills\\/([^\\/\\s"']+)/g;
+          var re = /(?:^|[\\/\\\\])\\.(?:github|claude|agents|copilot)[\\/\\\\]skills[\\/\\\\]([^\\/\\\\\\s"']+)/g;
           var m;
           while ((m = re.exec(val)) !== null) {
             out[m[1]] = true;
