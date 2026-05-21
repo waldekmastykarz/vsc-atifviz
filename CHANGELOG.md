@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-05-21
+
+### Fixed
+
+- Skill invocations with Windows backslash paths not detected (#18)
+
 ## [0.5.0] - 2026-05-15
 
 ### Added
