@@ -177,7 +177,7 @@ function getStyles(): string {
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, sans-serif);
+      font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
       font-size: var(--vscode-font-size, 13px);
       color: var(--fg);
       background: var(--bg);
