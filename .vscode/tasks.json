@@ -4,6 +4,14 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "npm install",
+			"type": "shell",
+			"command": "test -d node_modules && echo 'node_modules exists' || npm install",
+			"presentation": {
+				"reveal": "silent"
+			}
+		},
+		{
 			"type": "npm",
 			"script": "watch",
 			"problemMatcher": "$tsc-watch",
@@ -14,7 +22,8 @@
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			}
+			},
+			"dependsOn": "npm install"
 		}
 	]
 }
