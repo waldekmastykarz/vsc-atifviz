@@ -6,6 +6,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-28
+
+### Changed
+
+- Preview now opens in-place using the Custom Editor API instead of a side panel
+- Added "Show Source" button to switch back to the JSON editor
+- Tab icon changes to preview icon when custom editor is active
+
 ## [0.5.1] - 2026-05-21
 
 ### Fixed
