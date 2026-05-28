@@ -16,23 +16,43 @@
   "categories": [
     "Visualization"
   ],
-  "activationEvents": [
-    "onLanguage:json"
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "customEditors": [
+      {
+        "viewType": "atifPreview",
+        "displayName": "ATIF Trajectory Preview",
+        "priority": "option",
+        "selector": [
+          {
+            "filenamePattern": "*.json"
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "atif-visualizer.preview",
         "title": "ATIF: Preview Trajectory",
         "icon": "$(type-hierarchy-sub)"
+      },
+      {
+        "command": "atif-visualizer.showSource",
+        "title": "ATIF: Show Source",
+        "icon": "$(file-code)"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "when": "resourceLangId == json",
+          "when": "resourceLangId == json && activeCustomEditorId != atifPreview",
           "command": "atif-visualizer.preview",
+          "group": "navigation"
+        },
+        {
+          "when": "activeCustomEditorId == atifPreview",
+          "command": "atif-visualizer.showSource",
           "group": "navigation"
         }
       ]

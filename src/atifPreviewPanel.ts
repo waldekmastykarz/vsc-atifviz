@@ -1,70 +1,59 @@
 import * as vscode from 'vscode';
 
-export class AtifPreviewPanel {
-  private static panels: Map<string, AtifPreviewPanel> = new Map();
-  private static readonly viewType = 'atifPreview';
+export class AtifEditorProvider implements vscode.CustomTextEditorProvider {
+  public static readonly viewType = 'atifPreview';
 
-  private readonly panel: vscode.WebviewPanel;
-  private readonly extensionUri: vscode.Uri;
-  private sourceUri: vscode.Uri;
-  private disposables: vscode.Disposable[] = [];
+  constructor(private readonly extensionUri: vscode.Uri) {}
 
-  public static createOrShow(extensionUri: vscode.Uri, document: vscode.TextDocument): void {
-    const column = vscode.ViewColumn.Beside;
-    const key = document.uri.toString();
+  public static register(context: vscode.ExtensionContext): vscode.Disposable {
+    const provider = new AtifEditorProvider(context.extensionUri);
+    return vscode.window.registerCustomEditorProvider(
+      AtifEditorProvider.viewType,
+      provider,
+      { supportsMultipleEditorsPerDocument: false }
+    );
+  }
 
-    const existing = AtifPreviewPanel.panels.get(key);
-    if (existing) {
-      existing.update(document.getText());
-      existing.panel.reveal(column);
-      return;
-    }
+  public resolveCustomTextEditor(
+    document: vscode.TextDocument,
+    webviewPanel: vscode.WebviewPanel,
+    _token: vscode.CancellationToken
+  ): void {
+    webviewPanel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist'),
+      ],
+    };
 
-    const panel = vscode.window.createWebviewPanel(
-      AtifPreviewPanel.viewType,
-      `ATIF: ${getFileName(document.uri)}`,
-      column,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode', 'codicons', 'dist'),
-        ],
+    webviewPanel.iconPath = new vscode.ThemeIcon('type-hierarchy-sub');
+
+    const update = () => {
+      const text = document.getText();
+      webviewPanel.webview.html = this.getHtml(webviewPanel.webview, text);
+    };
+
+    const changeSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
+      if (e.document.uri.toString() === document.uri.toString()) {
+        update();
       }
-    );
+    });
 
-    AtifPreviewPanel.panels.set(key, new AtifPreviewPanel(panel, extensionUri, document));
+    webviewPanel.onDidDispose(() => {
+      changeSubscription.dispose();
+    });
+
+    webviewPanel.webview.onDidReceiveMessage((message) => {
+      if (message.type === 'openFile') {
+        this.openReferencedFile(document.uri, message.path);
+      }
+    });
+
+    update();
   }
 
-  public static updateIfActive(document: vscode.TextDocument): void {
-    const existing = AtifPreviewPanel.panels.get(document.uri.toString());
-    if (existing) {
-      existing.update(document.getText());
-    }
-  }
-
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, document: vscode.TextDocument) {
-    this.panel = panel;
-    this.extensionUri = extensionUri;
-    this.sourceUri = document.uri;
-
-    this.update(document.getText());
-
-    this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
-
-    this.panel.webview.onDidReceiveMessage(
-      (message) => {
-        if (message.type === 'openFile') {
-          this.openReferencedFile(message.path);
-        }
-      },
-      null,
-      this.disposables
-    );
-  }
-
-  private async openReferencedFile(refPath: string): Promise<void> {
-    const sourceDir = vscode.Uri.joinPath(this.sourceUri, '..');
+  private async openReferencedFile(docUri: vscode.Uri, refPath: string): Promise<void> {
+    const sourceDir = vscode.Uri.joinPath(docUri, '..');
     const uri = refPath.startsWith('/')
       ? vscode.Uri.file(refPath)
       : vscode.Uri.joinPath(sourceDir, refPath);
@@ -72,32 +61,13 @@ export class AtifPreviewPanel {
     try {
       const doc = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.One);
-      // Trigger preview on the opened file
-      AtifPreviewPanel.createOrShow(vscode.Uri.file(''), doc);
     } catch {
       vscode.window.showErrorMessage(`Could not open referenced trajectory: ${refPath}`);
     }
   }
 
-  private dispose(): void {
-    AtifPreviewPanel.panels.delete(this.sourceUri.toString());
-    this.panel.dispose();
-    while (this.disposables.length) {
-      const d = this.disposables.pop();
-      if (d) {
-        d.dispose();
-      }
-    }
-  }
-
-  private update(text: string): void {
-    this.panel.title = `ATIF: ${getFileName(this.sourceUri)}`;
-    this.panel.webview.html = this.getHtml(text);
-  }
-
-  private getHtml(jsonText: string): string {
+  private getHtml(webview: vscode.Webview, jsonText: string): string {
     const nonce = getNonce();
-    const webview = this.panel.webview;
 
     // Codicon CSS URI
     const codiconCssUri = webview.asWebviewUri(
@@ -141,11 +111,6 @@ export class AtifPreviewPanel {
 </body>
 </html>`;
   }
-}
-
-function getFileName(uri: vscode.Uri): string {
-  const parts = uri.path.split('/');
-  return parts[parts.length - 1];
 }
 
 function getNonce(): string {
