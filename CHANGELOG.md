@@ -6,6 +6,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-15
+
+### Added
+
+- Steps without tool calls now render their observation results in a dedicated "Observation" section (e.g. `model_routing` system steps)
+- Eye indicator in the step header when a step has standalone observation results
+- `event_type` badge in the step header (from step `extra.event_type`)
+
 ## [0.6.0] - 2026-05-28
 
 ### Changed
