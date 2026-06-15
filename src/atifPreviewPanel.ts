@@ -974,6 +974,17 @@ function getStyles(): string {
       border-color: var(--badge-system);
     }
 
+    /* event_type badge (e.g. model_routing) */
+    .event-type-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      color: var(--subtle);
+      white-space: nowrap;
+      font-family: var(--vscode-editor-font-family, monospace);
+    }
+
     /* v1.7: extra metadata */
     .extra-section {
       margin-top: 8px;
@@ -1705,6 +1716,23 @@ function getScript(): string {
 
       // ── Step rendering ──
 
+      // Observation results that are not tied to a tool call in this step
+      // (e.g. system "model_routing" steps where the routing decision is the
+      // observation). Results matched to a tool_call_id are rendered inline
+      // within their tool call instead.
+      function getStandaloneObs(step) {
+        if (!step.observation || !step.observation.results) return [];
+        var toolCallIds = {};
+        if (step.tool_calls) {
+          step.tool_calls.forEach(function(tc) {
+            if (tc.tool_call_id) toolCallIds[tc.tool_call_id] = true;
+          });
+        }
+        return step.observation.results.filter(function(r) {
+          return !(r.source_call_id && toolCallIds[r.source_call_id]);
+        });
+      }
+
       function renderStep(step, index, steps, paneId, allSameModel) {
         // Store trajectory steps for this pane (set once per pane)
         if (!paneTrajectories[paneId]) {
@@ -1741,6 +1769,9 @@ function getScript(): string {
         if (step.model_name && !allSameModel) {
           html += '<span class="model-badge">' + esc(step.model_name) + '</span>';
         }
+        if (step.extra && step.extra.event_type) {
+          html += '<span class="event-type-badge" title="event_type">' + esc(step.extra.event_type) + '</span>';
+        }
         html += '<span class="step-preview">' + esc(getPreview(step.message || step.reasoning_content)) + '</span>';
         // Content indicators
         html += '<span class="step-indicators">';
@@ -1752,6 +1783,10 @@ function getScript(): string {
         }
         if (step.tool_calls && step.tool_calls.length > 0) {
           html += '<span class="step-indicator" title="Tool calls"><span class="step-indicator-icon codicon codicon-tools"></span><span class="step-indicator-count">' + step.tool_calls.length + '</span></span>';
+        }
+        var standaloneObs = getStandaloneObs(step);
+        if (standaloneObs.length > 0) {
+          html += '<span class="step-indicator" title="Observation"><span class="step-indicator-icon codicon codicon-eye"></span></span>';
         }
         if (stepSkillNames.length > 0) {
           var skillTitle = 'Skill' + (stepSkillNames.length > 1 ? 's' : '') + ': ' + stepSkillNames.join(', ');
@@ -1799,6 +1834,16 @@ function getScript(): string {
           html += '<div class="section-title">Tool Calls (' + step.tool_calls.length + ')</div>';
           step.tool_calls.forEach(function(tc) {
             html += renderToolCall(tc, obsMap[tc.tool_call_id]);
+          });
+          html += '</div>';
+        }
+
+        // Observation results not tied to a tool call (e.g. system/model_routing steps)
+        if (standaloneObs.length > 0) {
+          html += '<div class="section">';
+          html += '<div class="section-title">Observation</div>';
+          standaloneObs.forEach(function(r) {
+            html += renderObsResult(r);
           });
           html += '</div>';
         }
