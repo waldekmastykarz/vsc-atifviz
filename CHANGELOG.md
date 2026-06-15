@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-06-15
+
+### Changed
+
+- Header now shows the resolved model (e.g. `auto → gpt-5.3-codex`) when the agent declares a generic/routed model but all steps resolved to a single concrete model
+
 ## [0.7.0] - 2026-06-15
 
 ### Added
