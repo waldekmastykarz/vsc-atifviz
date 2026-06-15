@@ -1193,6 +1193,16 @@ function getScript(): string {
       function buildTrajectoryHtml(t, paneId) {
         let html = '';
 
+        // Check if all steps that have a model use the same one
+        var allSameModel = true;
+        var seenModel = null;
+        t.steps.forEach(function(s) {
+          if (s.model_name) {
+            if (seenModel === null) seenModel = s.model_name;
+            else if (s.model_name !== seenModel) allSameModel = false;
+          }
+        });
+
         // Header
         html += '<div class="header">';
         html += '<h1>' + esc(t.agent.name || 'Unknown Agent') + ' Trajectory</h1>';
@@ -1200,7 +1210,16 @@ function getScript(): string {
         html += '<span>Version: ' + esc(t.agent.version || '?') + '</span>';
         html += '<span>ATIF: ' + esc(t.schema_version || '?') + '</span>';
         if (t.agent.model_name) {
-          html += '<span>Model: ' + esc(t.agent.model_name) + '</span>';
+          // If the agent declares a generic/routed model (e.g. "auto") but every
+          // step resolved to a single concrete model, surface that resolved model
+          // so it isn't hidden (per-step badges only show when models differ).
+          if (allSameModel && seenModel && seenModel !== t.agent.model_name) {
+            html += '<span>Model: ' + esc(t.agent.model_name) + ' → ' + esc(seenModel) + '</span>';
+          } else {
+            html += '<span>Model: ' + esc(t.agent.model_name) + '</span>';
+          }
+        } else if (allSameModel && seenModel) {
+          html += '<span>Model: ' + esc(seenModel) + '</span>';
         }
         if (t.trajectory_id) {
           html += '<span>Trajectory: <code>' + esc(truncate(t.trajectory_id, 20)) + '</code></span>';
@@ -1243,16 +1262,6 @@ function getScript(): string {
           html += '<hr>';
           html += '</div>';
         }
-        // Check if all steps that have a model use the same one
-        var allSameModel = true;
-        var seenModel = null;
-        t.steps.forEach(function(s) {
-          if (s.model_name) {
-            if (seenModel === null) seenModel = s.model_name;
-            else if (s.model_name !== seenModel) allSameModel = false;
-          }
-        });
-
         // Filter bar
         var usedTools = {};
         var usedSkills = {};
