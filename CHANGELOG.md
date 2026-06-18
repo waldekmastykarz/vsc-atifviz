@@ -6,6 +6,21 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-18
+
+### Added
+
+- Utility step support: wrench icon for steps with `extra.utility: true`
+- View toggle in filter bar to show/hide utility steps
+- `atifviz.showUtilitySteps` setting to control default visibility of utility steps
+
+### Changed
+
+- Source badges use fixed-width slot for consistent horizontal alignment
+- Filter bar labels (Tools, Skills, Search) now use consistent uppercase styling
+- Renamed "Version" to "Agent" in trajectory header
+- Removed ATIF schema version from trajectory header
+
 ## [0.7.1] - 2026-06-15
 
 ### Changed
