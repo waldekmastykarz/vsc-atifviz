@@ -74,6 +74,9 @@ export class AtifEditorProvider implements vscode.CustomTextEditorProvider {
       vscode.Uri.joinPath(this.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
     );
 
+    const config = vscode.workspace.getConfiguration('atifviz');
+    const showUtilitySteps = config.get<boolean>('showUtilitySteps', true);
+
     // Safely embed JSON in a script tag by escaping only what's dangerous in that context
     const safeJson = jsonText.replace(/</g, '\\u003c');
 
@@ -105,6 +108,7 @@ export class AtifEditorProvider implements vscode.CustomTextEditorProvider {
   <div id="app"></div>
   <script nonce="${nonce}">
     ${jsonEmbed}
+    var showUtilityByDefault = ${showUtilitySteps};
     var vscode = acquireVsCodeApi();
     ${getScript()}
   </script>
@@ -538,6 +542,11 @@ function getStyles(): string {
       font-weight: 700;
       font-size: 14px;
       min-width: 28px;
+    }
+
+    .source-badge-slot {
+      min-width: 62px;
+      display: inline-flex;
     }
 
     .source-badge {
@@ -1002,6 +1011,38 @@ function getStyles(): string {
       background: var(--badge-system);
       color: #fff;
     }
+
+    /* Utility step icon */
+    .utility-icon {
+      color: var(--subtle);
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .step.utility-hidden {
+      display: none;
+    }
+
+    .filter-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-toggle label {
+      font-size: 12px;
+      color: var(--fg);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .filter-toggle input[type="checkbox"] {
+      cursor: pointer;
+    }
   `;
 }
 
@@ -1207,8 +1248,7 @@ function getScript(): string {
         html += '<div class="header">';
         html += '<h1>' + esc(t.agent.name || 'Unknown Agent') + ' Trajectory</h1>';
         html += '<div class="header-meta">';
-        html += '<span>Version: ' + esc(t.agent.version || '?') + '</span>';
-        html += '<span>ATIF: ' + esc(t.schema_version || '?') + '</span>';
+        html += '<span>Agent: ' + esc(t.agent.version || '?') + '</span>';
         if (t.agent.model_name) {
           // If the agent declares a generic/routed model (e.g. "auto") but every
           // step resolved to a single concrete model, surface that resolved model
@@ -1265,6 +1305,7 @@ function getScript(): string {
         // Filter bar
         var usedTools = {};
         var usedSkills = {};
+        var hasUtilitySteps = false;
         t.steps.forEach(function(s) {
           if (s.tool_calls) {
             s.tool_calls.forEach(function(tc) {
@@ -1273,6 +1314,7 @@ function getScript(): string {
             });
           }
           getStepSkills(s).forEach(function(sk) { usedSkills[sk] = true; });
+          if (s.extra && s.extra.utility) hasUtilitySteps = true;
         });
         var usedToolNames = Object.keys(usedTools).sort();
         var usedSkillNames = Object.keys(usedSkills).sort();
@@ -1297,8 +1339,16 @@ function getScript(): string {
           });
           html += '</div></div>';
         }
+        if (hasUtilitySteps) {
+          html += '<div class="filter-row">';
+          html += '<label class="filter-row-label">View:</label>';
+          html += '<div class="filter-toggle">';
+          html += '<label><input type="checkbox" class="filter-utility-toggle" data-pane="' + paneId + '"> Utility steps</label>';
+          html += '</div>';
+          html += '</div>';
+        }
         html += '<div class="filter-text">';
-        html += '<label>Search:</label>';
+        html += '<label class="filter-row-label">Search:</label>';
         html += '<input type="text" class="filter-text-input" data-pane="' + paneId + '" placeholder="Filter steps by text...">';
         html += '</div>';
         html += '</div>';
@@ -1356,6 +1406,16 @@ function getScript(): string {
         const totalSteps = container.querySelectorAll('.step').length;
 
         // Nav button listeners use data-pane attributes, handled by delegation
+
+        // Utility toggle
+        var utilToggle = document.querySelector('.filter-utility-toggle[data-pane="' + paneId + '"]');
+        if (utilToggle) {
+          utilToggle.checked = showUtilityByDefault;
+          utilToggle.addEventListener('change', function() {
+            applyFilters(paneId);
+          });
+          applyFilters(paneId);
+        }
 
         // Text filter input
         var textInput = document.querySelector('.filter-text-input[data-pane="' + paneId + '"]');
@@ -1477,11 +1537,24 @@ function getScript(): string {
         // Get trajectory steps data
         var steps = paneTrajectories[paneId] || [];
 
+        // Get utility toggle state
+        var utilToggle = document.querySelector('.filter-utility-toggle[data-pane="' + paneId + '"]');
+        var showUtility = utilToggle ? utilToggle.checked : true;
+
         // Apply to DOM
         var stepEls = container.querySelectorAll('.step');
         stepEls.forEach(function(el) {
           var idx = parseInt(el.getAttribute('data-index'), 10);
           var step = steps[idx];
+
+          // Utility filter
+          if (el.getAttribute('data-utility') === 'true' && !showUtility) {
+            el.classList.add('utility-hidden');
+            el.classList.remove('dimmed');
+            return;
+          }
+          el.classList.remove('utility-hidden');
+
           var match = true;
 
           // Tool filter
@@ -1759,16 +1832,20 @@ function getScript(): string {
         var stepSkillNames = getStepSkills(step);
 
         const source = step.source || 'unknown';
+        var isUtility = step.extra && step.extra.utility === true;
         var stepClasses = 'step';
         if (step.is_copied_context) stepClasses += ' copied-context';
-        let html = '<div class="' + stepClasses + '" data-index="' + index + '" data-tools="' + esc(stepToolNames.join(',')) + '" data-skills="' + esc(stepSkillNames.join(',')) + '">';
+        let html = '<div class="' + stepClasses + '" data-index="' + index + '" data-tools="' + esc(stepToolNames.join(',')) + '" data-skills="' + esc(stepSkillNames.join(',')) + '"' + (isUtility ? ' data-utility="true"' : '') + '>';
 
         // Header
         html += '<div class="step-header">';
         html += '<span class="step-number">#' + (step.step_id || index + 1) + '</span>';
-        html += '<span class="source-badge ' + source + '">' + esc(source) + '</span>';
+        html += '<span class="source-badge-slot"><span class="source-badge ' + source + '">' + esc(source) + '</span></span>';
         if (step.is_copied_context) {
           html += '<span class="copied-context-badge">copied context</span>';
+        }
+        if (isUtility) {
+          html += '<span class="utility-icon" title="Utility step"><span class="codicon codicon-wrench"></span></span>';
         }
         if (step.llm_call_count === 0) {
           html += '<span class="llm-count-badge deterministic" title="Deterministic dispatch (no LLM call)">deterministic</span>';

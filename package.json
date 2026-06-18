@@ -56,6 +56,16 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "ATIF Preview",
+      "properties": {
+        "atifviz.showUtilitySteps": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show utility steps in the trajectory preview by default."
+        }
+      }
     }
   },
   "scripts": {
