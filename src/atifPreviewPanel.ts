@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+export const SKILL_PATH_PATTERN = String.raw`(?:^|[/\\]+)(?:\.(?:github|claude|agents|copilot)[/\\]+skills|\.copilot[/\\]+installed-plugins(?:[/\\]+[^/\\\s"']+)+[/\\]+skills)[/\\]+([^/\\\s"']+)`;
+
 export class AtifEditorProvider implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'atifPreview';
 
@@ -1465,13 +1467,15 @@ function getScript(): string {
       // Detect skill usage from tool call arguments. A skill is identified by a
       // path under a known VS Code Agent Skills location:
       //   .github/skills/, .claude/skills/, .agents/skills/, .copilot/skills/
+      // or an installed plugin location:
+      //   .copilot/installed-plugins/<plugin path>/skills/
       // (project skills live in the workspace; personal skills live under ~/).
       // The segment immediately after "skills/" is the skill name. Any file
       // under that directory (including subfolders) counts as skill usage.
       function collectSkillsFromValue(val, out) {
         if (val == null) return;
         if (typeof val === 'string') {
-          var re = /(?:^|[\\/\\\\])\\.(?:github|claude|agents|copilot)[\\/\\\\]skills[\\/\\\\]([^\\/\\\\\\s"']+)/g;
+          var re = new RegExp(${JSON.stringify(SKILL_PATH_PATTERN)}, 'g');
           var m;
           while ((m = re.exec(val)) !== null) {
             out[m[1]] = true;
