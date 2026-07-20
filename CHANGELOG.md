@@ -6,6 +6,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-07-20
+
+### Fixed
+
+- Skill reads from Copilot installed-plugin paths are now detected as skill usage
+
 ## [0.8.0] - 2026-06-18
 
 ### Added
