@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export const SKILL_PATH_PATTERN = String.raw`(?:^|[/\\]+)(?:\.(?:github|claude|agents|copilot)[/\\]+skills|\.copilot[/\\]+installed-plugins(?:[/\\]+[^/\\\s"']+)+[/\\]+skills)[/\\]+([^/\\\s"']+)`;
+export const SKILL_PATH_PATTERN = String.raw`(?:^|[/\\]+)(?:\.(?:github|claude|agents|copilot)[/\\]+skills|\.copilot[/\\]+installed-plugins(?:[/\\]+[^/\\\s"']+)+[/\\]+skills|\.vscode(?:-insiders)?[/\\]+extensions(?:[/\\]+[^/\\\s"']+)+[/\\]+skills)[/\\]+([^/\\\s"']+)`;
 
 export class AtifEditorProvider implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'atifPreview';
@@ -1467,8 +1467,10 @@ function getScript(): string {
       // Detect skill usage from tool call arguments. A skill is identified by a
       // path under a known VS Code Agent Skills location:
       //   .github/skills/, .claude/skills/, .agents/skills/, .copilot/skills/
-      // or an installed plugin location:
+      // an installed plugin location:
       //   .copilot/installed-plugins/<plugin path>/skills/
+      // or a VS Code extension-contributed location:
+      //   .vscode/extensions/<extension path>/skills/ (also .vscode-insiders)
       // (project skills live in the workspace; personal skills live under ~/).
       // The segment immediately after "skills/" is the skill name. Any file
       // under that directory (including subfolders) counts as skill usage.

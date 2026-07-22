@@ -42,4 +42,16 @@ suite('Extension Test Suite', () => {
 
 		assert.deepStrictEqual(paths.map(detectSkill), ['wiqd', 'wiqd']);
 	});
+
+	test('Detects skills contributed by VS Code extensions', () => {
+		const paths = [
+			String.raw`C:\Users\scope\.vscode\extensions\teamsdevapp.ms-teams-vscode-extension-6.12.0\skills\microsoft-365-agents-toolkit\SKILL.md`,
+			'/Users/user/.vscode-insiders/extensions/garrytrinder.dev-proxy-toolkit-1.34.0/dist/skills/dev-proxy/SKILL.md',
+		];
+
+		assert.deepStrictEqual(paths.map(detectSkill), [
+			'microsoft-365-agents-toolkit',
+			'dev-proxy',
+		]);
+	});
 });
